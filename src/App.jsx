@@ -1,35 +1,20 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
-import Places from './components/Places.jsx';
-import Modal from './components/Modal.jsx';
-import DeleteConfirmation from './components/DeleteConfirmation.jsx';
 import logoImg from './assets/logo.png';
 import AvailablePlaces from './components/AvailablePlaces.jsx';
-import { fetchUserPlaces, updateUserPlaces } from './http.js';
+import DeleteConfirmation from './components/DeleteConfirmation.jsx';
 import Error from './components/Error.jsx';
+import Modal from './components/Modal.jsx';
+import Places from './components/Places.jsx';
+import useFetch from './hooks/useFetch.js';
+import { fetchUserPlaces, updateUserPlaces } from './http.js';
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
   const selectedPlace = useRef();
-
-  useEffect(() => {
-    setIsLoading(true);
-    async function loadUserPlaces() {
-      try {
-        const places = await fetchUserPlaces();
-        setUserPlaces(places);
-        setIsLoading(false);
-      } catch (error) {
-        setErrorUpdatingPlaces(error.message || 'Something went wrong!');
-        setIsLoading(false);
-      }
-    }
-    loadUserPlaces();
-  }, []);
-
-  const [userPlaces, setUserPlaces] = useState([]);
   const [errorUpdatingPlaces, setErrorUpdatingPlaces] = useState(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+
+  const { fetchedPlaces: userPlaces, error, isLoading, setFetchedPlaces: setUserPlaces } = useFetch(fetchUserPlaces, []);
 
   function handleStartRemovePlace(place) {
     setModalIsOpen(true);
@@ -62,26 +47,25 @@ function App() {
   }
 
   const handleRemovePlace = useCallback(async function handleRemovePlace() {
-    setUserPlaces((prevPickedPlaces) =>
-      prevPickedPlaces.filter((place) => place.id !== selectedPlace.current.id)
-    );
+    const updatedPlaces = userPlaces.filter((place) => place.id !== selectedPlace.current.id)
+    setUserPlaces(updatedPlaces);
 
     try {
-      await updateUserPlaces(userPlaces);
+      await updateUserPlaces(updatedPlaces);
     } catch (error) {
       setErrorUpdatingPlaces(error.message || 'Something went wrong!');
       setUserPlaces(userPlaces);
     }
 
     setModalIsOpen(false);
-  }, []);
+  }, [userPlaces/* , setUserPlaces */]);
 
   return (
     <>
       <Modal open={errorUpdatingPlaces} onClose={() => setErrorUpdatingPlaces(null)}>
-        <Error 
-          title="An error ocurred" 
-          message={errorUpdatingPlaces} 
+        <Error
+          title="An error ocurred"
+          message={errorUpdatingPlaces}
           onConfirm={() => setErrorUpdatingPlaces(null)}
         />
       </Modal>
@@ -116,5 +100,6 @@ function App() {
     </>
   );
 }
+
 
 export default App;
